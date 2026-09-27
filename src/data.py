@@ -7,10 +7,17 @@ import albumentations as A
 import numpy as np
 from colorama import Fore 
 from matplotlib import pyplot as plt 
-from utils.boxes import rescale_bboxes, stacker
-from utils.setup import get_classes
-from utils.logger import get_logger
-from utils.rich_handlers import DataLoaderHandler
+# Handle imports for both direct execution from src/ and when run as a module
+try:
+    from utils.boxes import rescale_bboxes, stacker
+    from utils.setup import get_classes
+    from utils.logger import get_logger
+    from utils.rich_handlers import DataLoaderHandler
+except ImportError:
+    from src.utils.boxes import rescale_bboxes, stacker
+    from src.utils.setup import get_classes
+    from src.utils.logger import get_logger
+    from src.utils.rich_handlers import DataLoaderHandler
 import sys 
 
 

@@ -3,8 +3,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 from scipy.optimize import linear_sum_assignment
 import sys
-from colorama import Fore 
-from utils.boxes import box_cxcywh_to_xyxy, generalized_box_iou
+from colorama import Fore
+
+# Handle imports for both direct execution from src/ and when run as a module
+try:
+    from utils.boxes import box_cxcywh_to_xyxy, generalized_box_iou
+except ImportError:
+    from src.utils.boxes import box_cxcywh_to_xyxy, generalized_box_iou
 
 class HungarianMatcher(nn.Module):
     """

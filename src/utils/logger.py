@@ -129,15 +129,15 @@ class SignLanguageLogger:
 
     def test(self, message: str, **kwargs):
         """Log test-related message with rich formatting."""
-        self.logger.info(f"[test]🧪 {message}[/test]", **kwargs)
+        self.logger.info(f"[test][TEST] {message}[/test]", **kwargs)
 
     def realtime(self, message: str, **kwargs):
         """Log realtime-related message with rich formatting."""
-        self.logger.info(f"[realtime]📹 {message}[/realtime]", **kwargs)
+        self.logger.info(f"[realtime][VIDEO] {message}[/realtime]", **kwargs)
 
     def detection(self, message: str, **kwargs):
         """Log detection-related message with rich formatting."""
-        self.logger.info(f"[detection]🎯 {message}[/detection]", **kwargs)
+        self.logger.info(f"[detection][TARGET] {message}[/detection]", **kwargs)
 
     def print_panel(self, title: str, content: str, style: str = "blue"):
         """Print content in a rich panel."""
@@ -159,18 +159,18 @@ class SignLanguageLogger:
     def print_status(self, status: str, message: str, style: str = "blue"):
         """Print a status message with icon."""
         status_icons = {
-            "info": "ℹ️",
-            "success": "✅",
-            "warning": "⚠️",
-            "error": "❌",
-            "loading": "⏳",
-            "done": "🎉",
-            "data": "📊",
-            "model": "🤖",
-            "training": "🏋️",
-            "test": "🧪",
-            "realtime": "📹",
-            "detection": "🎯",
+            "info": "[INFO]",
+            "success": "[SUCCESS]",
+            "warning": "[WARNING]",
+            "error": "[ERROR]",
+            "loading": "[LOADING]",
+            "done": "[DONE]",
+            "data": "[DATA]",
+            "model": "[MODEL]",
+            "training": "[TRAINING]",
+            "test": "[TEST]",
+            "realtime": "[VIDEO]",
+            "detection": "[TARGET]",
         }
 
         icon = status_icons.get(status, "•")
@@ -210,17 +210,17 @@ class SignLanguageLogger:
         ╚═╝  ╚═══╝ ╚═════╝ ╚═════╝ ╚═════╝    ╚═╝
 
 ╔═══════════════════════════════════════════════════════════╗
-║  🤟 Sign Language Detection with DETR                     ║
-║  🎯 Real-time Hand Sign Recognition                       ║
-║  🏋️  DETR (Detection Transformer) Model                    ║
-║  📊 Advanced Computer Vision Pipeline                     ║
+║  [SIGN] Sign Language Detection with DETR                 ║
+║  [TARGET] Real-time Hand Sign Recognition                 ║
+║  [TRAINING] DETR (Detection Transformer) Model           ║
+║  [DATA] Advanced Computer Vision Pipeline                 ║
 ╚═══════════════════════════════════════════════════════════╝
         """
         self.console.print(Panel(banner, style="bold cyan", border_style="blue", expand=False))
 
     def print_model_summary(self, model_info: Dict[str, Any]):
         """Print model architecture summary."""
-        table = Table(title="🤖 DETR Model Configuration", show_header=True, header_style="bold blue")
+        table = Table(title="[MODEL] DETR Model Configuration", show_header=True, header_style="bold blue")
         table.add_column("Parameter", style="cyan")
         table.add_column("Value", style="yellow")
 

@@ -4,11 +4,22 @@ from torch import load
 from model import DETR
 import albumentations as A
 from utils.boxes import rescale_bboxes
+from utils.camera import open_default_camera
+from utils.display import create_fullscreen_window
 from utils.setup import get_classes, get_colors
 from utils.logger import get_logger
 from utils.rich_handlers import DetectionHandler, create_detection_live_display
 import sys
 import time 
+
+print(cv2.__version__)
+
+try:
+    cv2.namedWindow("test")
+    cv2.destroyWindow("test")
+    print("✅ GUI supported")
+except cv2.error as e:
+    print("❌ GUI not supported:", e)
 
 
 # Initialize logger and handlers
@@ -33,7 +44,9 @@ CLASSES = get_classes()
 COLORS = get_colors() 
 
 logger.realtime("Starting camera capture...")
-cap = cv2.VideoCapture(0)
+cap = open_default_camera()
+window_name = 'Frame'
+create_fullscreen_window(window_name)
 
 # Initialize performance tracking
 frame_count = 0
@@ -51,22 +64,24 @@ while cap.isOpened():
     result = model(torch.unsqueeze(transformed['image'], dim=0))
     inference_time = (time.time() - inference_start) * 1000  # Convert to ms
 
-    probabilities = result['pred_logits'].softmax(-1)[:,:,:-1] 
+    probabilities = result['pred_logits'].softmax(-1)[:,:,:-1]
     max_probs, max_classes = probabilities.max(-1)
     keep_mask = max_probs > 0.8
 
-    batch_indices, query_indices = torch.where(keep_mask) 
+    batch_indices, query_indices = torch.where(keep_mask)
 
-    bboxes = rescale_bboxes(result['pred_boxes'][batch_indices, query_indices,:], (1920,1080))
+    # Get actual frame dimensions for proper box rescaling
+    frame_h, frame_w = frame.shape[:2]
+    bboxes = rescale_bboxes(result['pred_boxes'][batch_indices, query_indices,:], (frame_w, frame_h))
     classes = max_classes[batch_indices, query_indices]
     probas = max_probs[batch_indices, query_indices]
 
     # Prepare detection results for logging
     detections = []
-    for bclass, bprob, bbox in zip(classes, probas, bboxes): 
+    for bclass, bprob, bbox in zip(classes, probas, bboxes):
         bclass_idx = bclass.detach().numpy()
-        bprob_val = bprob.detach().numpy() 
-        x1,y1,x2,y2 = bbox.detach().numpy()
+        bprob_val = bprob.detach().numpy()
+        x1, y1, x2, y2 = bbox.detach().numpy()
         
         detections.append({
             'class': CLASSES[bclass_idx],
@@ -94,7 +109,7 @@ while cap.isOpened():
         # Reset FPS counter
         fps_start_time = time.time()
 
-    cv2.imshow('Frame', frame)
+    cv2.imshow(window_name, frame)
 
     if cv2.waitKey(1) & 0xFF == ord('q'): 
         logger.realtime("Stopping real-time detection...")

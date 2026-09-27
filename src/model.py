@@ -3,11 +3,28 @@ from torch import nn
 from torchvision.models import resnet50, ResNet50_Weights
 import sys 
 from colorama import Fore 
-from utils.logger import get_logger
-from utils.rich_handlers import ModelHandler
-from torchinfo import summary
 import sys 
 import math
+import warnings
+import os
+
+
+warnings.filterwarnings(
+    "ignore",
+    message=r"Error fetching version info.*",
+    category=UserWarning,
+)
+
+# Conditionally import logging utilities for non-Streamlit environments
+USE_RICH_LOGGING = os.environ.get("USE_RICH_LOGGING", "1") == "1"
+if USE_RICH_LOGGING:
+    # Handle imports for both direct execution from src/ and when run as a module
+    try:
+        from utils.logger import get_logger
+        from utils.rich_handlers import ModelHandler
+    except ImportError:
+        from src.utils.logger import get_logger
+        from src.utils.rich_handlers import ModelHandler
 
 
 def _get_1d_sincos_pos_embed(length: int, dim: int, temperature: float = 10000.0, device=None):
@@ -43,22 +60,26 @@ class DETR(nn.Module):
                  num_encoder_layers=1, num_decoder_layers=1, num_queries=25):
         super().__init__()
         
-        # Initialize logger and model handler
-        self.logger = get_logger("model")
-        self.model_handler = ModelHandler()
-        
-        # Log model configuration
-        model_config = {
-            "Model Type": "DETR (Detection Transformer)",
-            "Number of Classes": num_classes,
-            "Hidden Dimension": hidden_dim,
-            "Attention Heads": nheads,
-            "Encoder Layers": num_encoder_layers,
-            "Decoder Layers": num_decoder_layers,
-            "Object Queries": num_queries,
-            "Backbone": "ResNet-50 (ImageNet pretrained)"
-        }
-        self.model_handler.log_model_architecture(model_config)
+        # Initialize logger and model handler (only if Rich logging is enabled)
+        if USE_RICH_LOGGING:
+            self.logger = get_logger("model")
+            self.model_handler = ModelHandler()
+            
+            # Log model configuration
+            model_config = {
+                "Model Type": "DETR (Detection Transformer)",
+                "Number of Classes": num_classes,
+                "Hidden Dimension": hidden_dim,
+                "Attention Heads": nheads,
+                "Encoder Layers": num_encoder_layers,
+                "Decoder Layers": num_decoder_layers,
+                "Object Queries": num_queries,
+                "Backbone": "ResNet-50 (ImageNet pretrained)"
+            }
+            self.model_handler.log_model_architecture(model_config)
+        else:
+            self.logger = None
+            self.model_handler = None
 
         # create ResNet-50 backbone
         self.backbone = resnet50(weights=ResNet50_Weights.IMAGENET1K_V1)
@@ -122,18 +143,25 @@ class DETR(nn.Module):
     
     def log_model_info(self):
         """Log model parameter information."""
-        total_params = sum(p.numel() for p in self.parameters())
-        trainable_params = sum(p.numel() for p in self.parameters() if p.requires_grad)
-        self.model_handler.log_parameters_count(total_params, trainable_params)
+        if USE_RICH_LOGGING and self.model_handler:
+            total_params = sum(p.numel() for p in self.parameters())
+            trainable_params = sum(p.numel() for p in self.parameters() if p.requires_grad)
+            self.model_handler.log_parameters_count(total_params, trainable_params)
         
     def load_pretrained(self, checkpoint_path: str):
         """Load pretrained weights with logging."""
         try:
-            self.load_state_dict(torch.load(checkpoint_path))
-            self.model_handler.log_model_loading(checkpoint_path, success=True)
+            state_dict = torch.load(checkpoint_path, map_location="cpu")
+            self.load_state_dict(state_dict)
+            if USE_RICH_LOGGING and self.model_handler:
+                self.model_handler.log_model_loading(checkpoint_path, success=True)
+            return True
         except Exception as e:
-            self.logger.error(f"Failed to load checkpoint: {str(e)}")
-            self.model_handler.log_model_loading(checkpoint_path, success=False)
+            if USE_RICH_LOGGING and self.logger:
+                self.logger.error(f"Failed to load checkpoint: {str(e)}")
+            if USE_RICH_LOGGING and self.model_handler:
+                self.model_handler.log_model_loading(checkpoint_path, success=False)
+            raise
 
 
 if __name__ == '__main__': 

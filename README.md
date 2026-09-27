@@ -1,39 +1,78 @@
-# Using DETR Transformers for Basic Sign Language Estimation
-More of a deep dive into training a DETR model from scratch and all the nuaces with getting object detection running. It was...fun. Anyway, here's a full walkthrough from me to you. Let me know how you go!
+# SignDETR
 
-## See it live and in action 📺 - Click the image!
-<a href=""><img src="https://i.imgur.com/Om4kU9a.png"/></a>
-Link to be added. 
+SignDETR is a DETR (DEtection TRansformer) based real-time sign language detection project using PyTorch, OpenCV, and Albumentations. It detects sign language gestures (`hello`, `iloveyou`, `thankyou`) directly from your webcam.
 
-# Setup 🪛
-1. Install UV - `pip install uv`
-2. Clone the repo - `git clone https://github.com/nicknochnack/SignDETR .`
-3. Install all the dependencies `uv sync`
+## What It Does
 
-# Collecting images 
-1. Update classes in `src/utils/collect_images.py`
-2. Run the script `uv run src/utils/collect_images.py`
+- Captures frames from your webcam in real-time.
+- Runs DETR (ResNet-50 backbone + Transformer encoder/decoder) inference on captured frames.
+- Predicts bounding boxes, classes, and confidence scores.
+- Displays bounding boxes, confidence badges, and detection stats in an OpenCV window.
 
-# Labelling them 
-1. Make sure label-studio is installed `uv pip list | grep label-studio`
-2. Run the labelling tool `uv run label-studio`
-3. Create new project, setup 
-4. Labelling shortcuts CTRL + Enter submit, enter number per label 
+## Setup
 
-# Training 🦾
-1. Create a checkpoints folder `mkdir checkpoints`
-2. Run the training pipeline `uv run src/train.py`
+```powershell
+pip install uv
+uv sync
+```
 
-# Running  🚀 
-1. To test on your test set, update the checkpoint parameter in `test.py` then run `uv run src/test.py`
-2. To run in real time, update the checkpoint parameter in `realtime.py` then run `uv run src/realtime.py`</br> 
-<strong>N.B.</strong> you might need need to update your camera parameter in cv2.VideoCapture() to get the right webcam for your machine. 
+## Running The Apps
 
-# Great resources: 
-- <a href='https://colab.research.google.com/github/facebookresearch/detr/blob/colab/notebooks/detr_demo.ipynb'>DETR walkthrough</a> - I used this a ton when initially working out how to do this. 
+### 1. Streamlit Web Frontend (Recommended)
 
+To launch the web interface with live streaming, browser snapshot, and image upload:
 
-# Who, When, Why?
-👨🏾‍💻 Author: Nick Renotte <br />
-📅 Version: 1.x<br />
-📜 License: This project is licensed under the MIT License </br>
+```powershell
+uv run streamlit run streamlit_app.py
+```
+
+### 2. OpenCV Desktop Window
+
+To run the direct OpenCV webcam window:
+
+```powershell
+uv run src/realtime.py
+```
+
+If multiple cameras are connected, specify your webcam index:
+
+```powershell
+$env:SIGNDETR_CAMERA_INDEX="0"
+uv run src/realtime.py
+```
+
+Press **q** in the OpenCV window to exit.
+
+## Model & Classes
+
+- Checkpoint: `pretrained/4426_model.pt`
+- Detection Classes:
+  - `hello`
+  - `iloveyou`
+  - `thankyou`
+
+## Repository Structure
+
+```
+├── data/              # Original training and test datasets
+│   ├── train/
+│   └── test/
+├── pretrained/        # Model checkpoints
+│   └── 4426_model.pt  # Original pretrained DETR checkpoint
+├── src/
+│   ├── model.py       # DETR architecture definition
+│   ├── loss.py        # Hungarian matcher & SetCriterion loss
+│   ├── data.py        # Dataset & DataLoader pipeline
+│   ├── train.py       # Training script
+│   ├── test.py        # Evaluation script
+│   ├── realtime.py    # Real-time OpenCV webcam detection script
+│   ├── config.json    # Target class labels and display colors
+│   └── utils/         # Camera, box rescaling, logger, and display helpers
+├── Cheatsheet.png     # Reference gestures
+├── pyproject.toml     # Project dependencies
+└── uv.lock
+```
+
+## Author
+
+Original project by Nick Renotte.
