@@ -27,16 +27,10 @@ for p in (str(SRC_DIR), str(ROOT_DIR)):
     if p not in sys.path:
         sys.path.insert(0, p)
 
-try:
-    from model import DETR
-    from utils.boxes import rescale_bboxes
-    from utils.setup import get_classes, get_colors
-    from utils.camera import open_default_camera
-except ImportError:
-    from src.model import DETR
-    from src.utils.boxes import rescale_bboxes
-    from src.utils.setup import get_classes, get_colors
-    from src.utils.camera import open_default_camera
+from model import DETR
+from utils.boxes import rescale_bboxes
+from utils.setup import get_classes, get_colors
+from utils.camera import open_default_camera
 
 # ---------------------------------------------------------
 # Streamlit Page Config & Theme
@@ -113,8 +107,13 @@ def load_detr_model(checkpoint_path: str = "pretrained/4426_model.pt", num_class
     model.eval()
 
     full_path = ROOT_DIR / checkpoint_path
-    if not full_path.exists():
-        raise FileNotFoundError(f"Checkpoint not found at {full_path}")
+    # Automatically download weights if missing or if file is an LFS text pointer (< 1MB)
+    if not full_path.exists() or full_path.stat().st_size < 1_000_000:
+        full_path.parent.mkdir(parents=True, exist_ok=True)
+        url = "https://github.com/nicknochnack/SignDETR/raw/main/pretrained/4426_model.pt"
+        with st.spinner("Downloading pretrained DETR model weights (~108 MB)..."):
+            import urllib.request
+            urllib.request.urlretrieve(url, str(full_path))
 
     model.load_pretrained(str(full_path))
     return model, device
