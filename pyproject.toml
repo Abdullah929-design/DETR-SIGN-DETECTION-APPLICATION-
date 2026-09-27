@@ -17,6 +17,7 @@ dependencies = [
     "torch>=2.8.0",
     "torchinfo>=1.8.0",
     "torchvision>=0.23.0",
+    "streamlit-webrtc>=0.78.1",
 ]
 
 # pyproject.toml
