@@ -324,16 +324,17 @@ st.markdown("<br>", unsafe_allow_html=True)
 # ---------------------------------------------------------
 mode = st.radio(
     "Choose Input Mode:",
-    ["📹 Live Webcam Stream", "📸 Browser Camera Snap", "📁 Upload Image"],
+    ["📸 Browser Camera Snap", "📁 Upload Image", "📹 Live Desktop Stream (Local)"],
+    index=0,
     horizontal=True,
 )
 
 st.markdown("---")
 
-# ----------------- Mode 1: Live Webcam Stream -----------------
-if mode == "📹 Live Webcam Stream":
-    st.markdown("#### Real-time Desktop Camera Stream")
-    st.caption("Captures live video with DirectShow and continuously renders sign detection in the browser.")
+# ----------------- Mode: Live Desktop Stream (Local) -----------------
+if mode == "📹 Live Desktop Stream (Local)":
+    st.markdown("#### Real-time Desktop Camera Stream (Local)")
+    st.caption("Captures live video with OpenCV when running locally on your computer.")
 
     start_stream = st.toggle("🟢 Start Live Stream", value=False, key="live_stream_toggle")
 
