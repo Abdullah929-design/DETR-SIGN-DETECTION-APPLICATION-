@@ -20,6 +20,19 @@ import albumentations as A
 from albumentations.pytorch import ToTensorV2
 from PIL import Image
 
+# WebRTC imports for browser-based live video streaming
+try:
+    import av
+    from streamlit_webrtc import (
+        webrtc_streamer,
+        VideoProcessorBase,
+        RTCConfiguration,
+        WebRtcMode,
+    )
+    HAS_WEBRTC = True
+except ImportError:
+    HAS_WEBRTC = False
+
 # Ensure project root and src directory are in sys.path
 ROOT_DIR = Path(__file__).resolve().parent
 SRC_DIR = ROOT_DIR / "src"
@@ -231,6 +244,39 @@ def run_detection(
 
 
 # ---------------------------------------------------------
+# WebRTC Video Processor for Real-time Browser Stream
+# ---------------------------------------------------------
+RTC_CONFIG = (
+    RTCConfiguration({"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]})
+    if HAS_WEBRTC
+    else None
+)
+
+if HAS_WEBRTC:
+    class SignDetectionVideoProcessor(VideoProcessorBase):
+        def __init__(self):
+            self.threshold = 0.45
+            self.mirror = False
+            self.model = None
+            self.device = None
+            self.transform = None
+
+        def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
+            img_bgr = frame.to_ndarray(format="bgr24")
+            if self.mirror:
+                img_bgr = cv2.flip(img_bgr, 1)
+
+            if self.model is not None and self.transform is not None:
+                annotated_bgr, _, _ = run_detection(
+                    img_bgr, self.model, self.device, self.transform, threshold=self.threshold
+                )
+            else:
+                annotated_bgr = img_bgr
+
+            return av.VideoFrame.from_ndarray(annotated_bgr, format="bgr24")
+
+
+# ---------------------------------------------------------
 # Sidebar Controls
 # ---------------------------------------------------------
 with st.sidebar:
@@ -246,17 +292,6 @@ with st.sidebar:
     )
 
     mirror_input = st.checkbox("Mirror Camera / Flip Horizontal", value=False)
-
-    st.markdown("---")
-    st.markdown("### 📹 Hardware Camera")
-    camera_index = st.number_input(
-        "Camera Index (Desktop Stream)",
-        min_value=0,
-        max_value=5,
-        value=0,
-        step=1,
-        help="0 for default webcam, 1/2 for external USB cameras.",
-    )
 
     st.markdown("---")
     st.markdown("### 🎯 Detectable Hand Signs")
@@ -320,93 +355,48 @@ except Exception as e:
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# Mode Selection (Prevents Device Resource Conflict)
+# Mode Selection
 # ---------------------------------------------------------
+available_modes = []
+if HAS_WEBRTC:
+    available_modes.append("📹 Live Browser Video (WebRTC)")
+available_modes.extend(["📸 Browser Camera Snap", "📁 Upload Image"])
+
 mode = st.radio(
     "Choose Input Mode:",
-    ["📸 Browser Camera Snap", "📁 Upload Image", "📹 Live Desktop Stream (Local)"],
+    available_modes,
     index=0,
     horizontal=True,
 )
 
 st.markdown("---")
 
-# ----------------- Mode: Live Desktop Stream (Local) -----------------
-if mode == "📹 Live Desktop Stream (Local)":
-    st.markdown("#### Real-time Desktop Camera Stream (Local)")
-    st.caption("Captures live video with OpenCV when running locally on your computer.")
+# ----------------- Mode 1: Live Browser Video (WebRTC) -----------------
+if HAS_WEBRTC and mode == "📹 Live Browser Video (WebRTC)":
+    st.markdown("#### Real-time Browser Webcam Stream (WebRTC)")
+    st.caption("Streams your webcam continuously directly inside the web browser with real-time DETR sign language detection.")
 
-    start_stream = st.toggle("🟢 Start Live Stream", value=False, key="live_stream_toggle")
+    webrtc_ctx = webrtc_streamer(
+        key="sign-detr-live",
+        mode=WebRtcMode.SENDRECV,
+        rtc_configuration=RTC_CONFIG,
+        video_processor_factory=SignDetectionVideoProcessor,
+        media_stream_constraints={"video": True, "audio": False},
+        async_processing=True,
+    )
 
-    stream_view = st.empty()
-    metrics_view = st.empty()
+    if webrtc_ctx.video_processor:
+        webrtc_ctx.video_processor.threshold = confidence_threshold
+        webrtc_ctx.video_processor.mirror = mirror_input
+        webrtc_ctx.video_processor.model = model
+        webrtc_ctx.video_processor.device = device
+        webrtc_ctx.video_processor.transform = transform
 
-    if start_stream:
-        # Use DirectShow backend on Windows to prevent MSMF -1072875772 error
-        backends = [cv2.CAP_DSHOW, None] if hasattr(cv2, "CAP_DSHOW") else [None]
-        cap = None
-        for b in backends:
-            test_cap = cv2.VideoCapture(int(camera_index)) if b is None else cv2.VideoCapture(int(camera_index), b)
-            if test_cap.isOpened():
-                cap = test_cap
-                break
-            test_cap.release()
-
-        if cap is None or not cap.isOpened():
-            st.error(
-                f"Could not open hardware camera {camera_index} on this server."
-            )
-            st.info(
-                "🌐 **Viewing on Streamlit Cloud?**\n\n"
-                "Cloud servers in the data center do not have physical webcams attached.\n\n"
-                "👉 Please switch to **'📸 Browser Camera Snap'** above to capture directly from your computer or phone's camera!"
-            )
-        else:
-            frame_count = 0
-            start_time = time.time()
-            fps = 0.0
-
-            try:
-                while start_stream:
-                    ret, frame = cap.read()
-                    if not ret or frame is None:
-                        st.warning("Webcam feed was closed or disconnected.")
-                        break
-
-                    if mirror_input:
-                        frame = cv2.flip(frame, 1)
-
-                    annotated, detections, top_pred = run_detection(
-                        frame, model, device, transform, threshold=confidence_threshold
-                    )
-
-                    frame_count += 1
-                    if frame_count % 8 == 0:
-                        elapsed = time.time() - start_time
-                        fps = 8 / elapsed if elapsed > 0 else 0.0
-                        start_time = time.time()
-
-                    # Convert to RGB for Streamlit rendering
-                    frame_rgb = cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB)
-                    stream_view.image(frame_rgb, channels="RGB", width="stretch")
-
-                    if detections:
-                        active_labels = ", ".join(
-                            [f"**{d['class'].upper()}** ({d['confidence']*100:.1f}%)" for d in detections]
-                        )
-                        metrics_view.markdown(
-                            f"⚡ **FPS:** `{fps:.1f}` | ⏱️ **Latency:** `{detections[0]['latency_ms']:.1f}ms` | 🎯 **Detected:** {active_labels}"
-                        )
-                    else:
-                        metrics_view.markdown(
-                            f"⚡ **FPS:** `{fps:.1f}` | 🔍 **Top Candidate:** `{top_pred['class'].upper()}` ({top_pred['confidence']*100:.1f}%) [Threshold: {int(confidence_threshold*100)}%]"
-                        )
-
-                    time.sleep(0.01)
-            finally:
-                cap.release()
-    else:
-        stream_view.info("Toggle **'Start Live Stream'** above to start the webcam.")
+    st.markdown(
+        """
+        > 💡 **Tip:** Click **START** above and allow camera access. Perform any of the 3 signs (`hello`, `iloveyou`, `thankyou`) in front of your camera.
+        """
+    )
 
 # ----------------- Mode 2: Browser Camera Snap -----------------
 elif mode == "📸 Browser Camera Snap":

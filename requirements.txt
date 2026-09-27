@@ -1,4 +1,6 @@
 streamlit>=1.37.0
+streamlit-webrtc>=0.78.0
+av>=17.0.0
 torch
 torchvision
 opencv-python-headless>=4.8.0
