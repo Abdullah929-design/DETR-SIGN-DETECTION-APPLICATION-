@@ -354,7 +354,12 @@ if mode == "📹 Live Desktop Stream (Local)":
 
         if cap is None or not cap.isOpened():
             st.error(
-                f"Could not open camera {camera_index}. If your browser is using the webcam, close other camera tabs and retry."
+                f"Could not open hardware camera {camera_index} on this server."
+            )
+            st.info(
+                "🌐 **Viewing on Streamlit Cloud?**\n\n"
+                "Cloud servers in the data center do not have physical webcams attached.\n\n"
+                "👉 Please switch to **'📸 Browser Camera Snap'** above to capture directly from your computer or phone's camera!"
             )
         else:
             frame_count = 0
