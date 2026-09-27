@@ -1,5 +1,8 @@
 # 🤟 SignDETR: Real-Time Sign Language Detection with DETR
 
+<img width="2560" height="1600" alt="detr-sign-detection streamlit app(Nest Hub Max)" src="https://github.com/user-attachments/assets/76305f4b-962e-404a-90fc-eb48ea8e8eaf" />
+
+
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)](https://pytorch.org/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.37+-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://streamlit.io/)
@@ -16,7 +19,7 @@ The project features a **Streamlit Web Studio** supporting browser-based WebRTC 
 ## 🌐 Live Web Demo
 
 Access the live cloud deployment directly in your web browser:  
-👉 **[Launch SignDETR Web Studio](https://niapprjdsmnqb4egdamhnmk.streamlit.app)**
+👉 **[Launch SignDETR Web Studio](https://detr-sign-detection.streamlit.app/)**
 
 ---
 
